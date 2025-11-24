@@ -46,25 +46,43 @@ build {
   }
 
 provisioner "shell" {
-    inline = [
-      "apt-get update",
-      "apt-get install -y curl gnupg nginx",
-      "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -",
-      "apt-get install -y nodejs",
-      "npm install -g pm2",
-      "mkdir -p /home/azureuser/app",
-      "cp /tmp/app.js /home/azureuser/app/",
-      "cp /tmp/package.json /home/azureuser/app/",
-      "chown -R azureuser:azureuser /home/azureuser/app",
-      "cd /home/azureuser/app",
-      "npm install",
-      "pm2 start app.js --name node-app",
-      "pm2 save",
-      "pm2 startup systemd -u azureuser --hp /home/azureuser",
-      "cat > /etc/nginx/sites-available/default <<EOL\nserver {\n    listen 80;\n    server_name _;\n\n    location / {\n        proxy_pass http://localhost:3000;\n        proxy_http_version 1.1;\n        proxy_set_header Upgrade \$http_upgrade;\n        proxy_set_header Connection 'upgrade';\n        proxy_set_header Host \$host;\n        proxy_cache_bypass \$http_upgrade;\n    }\n}\nEOL",
-      "nginx -t",
-      "systemctl restart nginx"
-    ]
-  }
+  inline = [
+    "apt-get update",
+    "apt-get install -y curl gnupg nginx",
+    "curl -fsSL https://deb.nodesource.com/setup_18.x | bash -",
+    "apt-get install -y nodejs",
+    "npm install -g pm2",
+    "mkdir -p /home/azureuser/app",
+    "cp /tmp/app.js /home/azureuser/app/",
+    "cp /tmp/package.json /home/azureuser/app/",
+    "chown -R azureuser:azureuser /home/azureuser/app",
+    "cd /home/azureuser/app",
+    "npm install",
+    "pm2 start app.js --name node-app",
+    "pm2 save",
+    "pm2 startup systemd -u azureuser --hp /home/azureuser",
+    <<EOF
+cat << 'EOL' > /etc/nginx/sites-available/default
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+    }
+}
+EOL
+EOF
+    ,
+    "nginx -t",
+    "systemctl restart nginx"
+  ]
+}
+
 
 }
